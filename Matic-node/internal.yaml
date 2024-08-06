@@ -1,0 +1,43 @@
+  erigon:
+    image: thorax/erigon:2.53.4
+    container_name: erigon
+    command: --config=/erigon-home/config.yaml  --datadir=/erigon-home --chain=mumbai --bor.heimdall=https://heimdall-api-testnet.polygon.technology
+    volumes:
+      - ${PWD}/data/erigon:/erigon-home
+    ports:
+      - "8545:8545"    # HTTP & WebSockets & GraphQL -private
+      - "8546:8546"   
+      - "30303:30303/UDP" 
+      - "30303:30303/TCP"   #eth/68 peering  - public
+      - 9090   #gRPC Server - private
+      - 8080 
+      - 6060   #pprof and metrics  -private
+      - 8551   #Engine API (JWT auth) - private
+      - 42069  #Snap sync - public
+    networks:
+      - polygon
+    restart: unless-stopped
+
+
+  heimdall-init:
+    image: 0xpolygon/heimdall:0.3.4
+    entrypoint: /usr/bin/heimdalld
+    command: init --home=/heimdall-home
+    volumes:
+      - ${PWD}/data/heimdall:/heimdall-home
+    stdin_open: true
+    tty: true
+
+  heimdall:
+    image: 0xpolygon/heimdall:0.3.4
+    container_name: heimdall
+    entrypoint: /usr/bin/heimdalld
+    command: start --home=/heimdall-home --moniker=MyNodeName --p2p.laddr=tcp://0.0.0.0:26656 --rpc.laddr=tcp://0.0.0.0:26657
+    volumes:
+      - ${PWD}/data/heimdall:/heimdall-home
+    ports:
+      - "26657:26657"   # P2P (TCP)
+      - "26656:26656"   # RPC (TCP)
+    networks:
+      - polygon
+    restart: unless-stopped
